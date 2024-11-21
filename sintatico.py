@@ -133,7 +133,7 @@ class Sintatico:
             self.calculo()
 
     def com(self):
-        # <com> -> <atrib> | <if> | <leitura> | <impressao> | <bloco>
+        # <com> -> <atrib> | <if> | <leitura> | <escrita> | <bloco> | <for> | <while> | <retorna> | <call>
         token = self.tokenLido[0]
 
         if token == TOKEN.abreChave:
@@ -144,8 +144,74 @@ class Sintatico:
             self.leitura()
         elif token == TOKEN.WRITE:
             self.impressao()
+        elif token == TOKEN.FOR:
+            self.para()
+        elif token == TOKEN.WHILE:
+            self.enquanto()
+        elif token == TOKEN.RETURN:
+            self.retorna()
         else:
+            # TODO: Quando ver ident deve consultar a tabela para acionar call ou atrib
+            # self.call()
             self.atrib()
+
+    def para(self):
+        self.consome(TOKEN.FOR)
+        self.consome(TOKEN.ident)
+        self.consome(TOKEN.IN)
+        self.faixa()
+        self.consome(TOKEN.DO)
+        self.com()
+
+    def enquanto(self):
+        self.consome(TOKEN.WHILE)
+        self.consome(TOKEN.abrePar)
+        self.exp()
+        self.consome(TOKEN.fechaPar)
+        self.com()
+
+    def retorna(self):
+        # <retorna> -> return <expOpc> ;
+        self.consome(TOKEN.RETURN)
+        self.exp_opc()
+        self.consome(TOKEN.ptoVirg)
+
+    def faixa(self):
+        if self.tokenLido[0] == TOKEN.ident:
+            self.lista()
+        else:
+            self.consome(TOKEN.RANGE)
+            self.consome(TOKEN.abrePar)
+            self.exp()
+            self.consome(TOKEN.virg)
+            self.exp()
+            self.opc_range()
+            self.consome(TOKEN.fechaPar)
+
+    def lista(self):
+        if self.tokenLido[0] == TOKEN.ident:
+            self.consome(TOKEN.ident)
+            self.opc_indice()
+        else:
+            self.consome(TOKEN.abreCol)
+            self.elemento_lista()
+            self.consome(TOKEN.fechaCol)
+
+    def opc_indice(self):
+        pass
+
+    def elemento_lista(self):
+        pass
+
+    def opc_range(self):
+        if self.tokenLido[0] == TOKEN.virg:
+            self.consome(TOKEN.virg)
+            self.exp()
+
+    def exp_opc(self):
+        # <expOpc> -> LAMBDA | <exp>
+        if self.tokenLido[0] not in [TOKEN.ptoVirg]:
+            self.exp()
 
     def atrib(self):
         # <atrib> -> ident = <exp> ;

@@ -142,3 +142,7 @@ class TOKEN(IntEnum):
     @classmethod
     def tokens_tipo(cls):
         return [TOKEN.INT, TOKEN.FLOAT, TOKEN.STRING]
+
+    @classmethod
+    def tokens_tipo_valor(cls):
+        return [TOKEN.intVal, TOKEN.floatVal, TOKEN.strVal]
