@@ -1,0 +1,27 @@
+#
+# comentarios iniciam com # e vao ate o fim da linha
+#
+
+begin
+   int i = 3;
+   float j = 1.8;
+   string j = "Teste";
+   int [list] lista = [1];
+   int [list] lista2 = [1:5];
+   int [list] lista3 = [:5];
+   int [list] lista3 = [];
+   int k = 1.2.3.4;
+
+   read("Valor de j: ", A);
+   write("Teste", 2, e, "teste");
+
+   if (i >= j-3) then {
+      k = 7;
+      if (j != 9) then
+          k = 10.2;
+      else
+          k = 8;
+   } else
+      while = 15;
+
+end
