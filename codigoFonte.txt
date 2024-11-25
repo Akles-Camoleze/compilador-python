@@ -2,15 +2,15 @@
 # comentarios iniciam com # e vao ate o fim da linha
 #
 
+function main()
 begin
-   int i = 3;
-   float j = 1.8;
-   string j = "Teste";
-   int [list] lista = [1];
-   int [list] lista2 = [1:5];
-   int [list] lista3 = [:5];
-   int [list] lista3 = [];
-   int k = 1.2.3.4;
+   int i;
+   float j;
+   string j;
+   int [list] lista;
+   int [list] lista2;
+   int [list] lista3;
+   int [list] lista3;
 
    read("Valor de j: ", A);
    write("Teste", 2, e, "teste");
@@ -22,6 +22,8 @@ begin
       else
           k = 8;
    } else
-      while = 15;
+      while(true) {
+        i = i + 1;
+      }
 
 end

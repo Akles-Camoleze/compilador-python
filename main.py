@@ -34,8 +34,8 @@ class Tradutor:
 
 # inicia a traducao
 if __name__ == '__main__':
-    x = Tradutor('codigoFonte.txt')
+    x = Tradutor('codigoFonte2.txt')
     x.inicializa()
-    # x.traduz()
-    x.testaLexico()
+    x.traduz()
+    # x.testaLexico()
     x.finaliza()

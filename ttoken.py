@@ -42,17 +42,16 @@ class TOKEN(IntEnum):
     fechaCol = 32
     RETURN = 33
     LIST = 34
-    LEN = 35
-    floatVal = 36
-    strVal = 37
-    INT = 38
-    FLOAT = 39
-    FOR = 40
-    IN = 41
-    DO = 42
-    RANGE = 43
-    WHILE = 44
-    mod = 45
+    floatVal = 35
+    strVal = 36
+    INT = 37
+    FLOAT = 38
+    FOR = 39
+    IN = 40
+    DO = 41
+    RANGE = 42
+    WHILE = 43
+    mod = 44
 
     @classmethod
     def msg(cls, token):
@@ -91,17 +90,16 @@ class TOKEN(IntEnum):
             32: ']',
             33: 'return',
             34: 'list',
-            35: 'len',
-            36: 'floatVal',
-            37: 'strVal',
-            38: 'int',
-            39: 'float',
-            40: 'for',
-            41: 'in',
-            42: 'do',
-            43: 'range',
-            44: 'while',
-            45: '%',
+            35: 'floatVal',
+            36: 'strVal',
+            37: 'int',
+            38: 'float',
+            39: 'for',
+            40: 'in',
+            41: 'do',
+            42: 'range',
+            43: 'while',
+            44: '%',
         }
         return nomes[token]
 
@@ -137,12 +135,19 @@ class TOKEN(IntEnum):
 
     @classmethod
     def tokens_unarios(cls):
-        return ['(', ')', ',', '<', '>', ';', ' ', '\n', '=', '{', '}', '/', '*', '-', '+', '[', ']', ':', '%', '!', '\t']
+        return ['(', ')', ',', '<', '>', ';', ' ', '\n', '=', '{', '}', '/', '*', '-', '+', '[', ']', ':', '%', '!',
+                '\t']
 
     @classmethod
     def tokens_tipo(cls):
         return [TOKEN.INT, TOKEN.FLOAT, TOKEN.STRING]
 
     @classmethod
-    def tokens_tipo_valor(cls):
-        return [TOKEN.intVal, TOKEN.floatVal, TOKEN.strVal]
+    def tokens_valor(cls):
+        return [TOKEN.intVal, TOKEN.floatVal, TOKEN.strVal, TOKEN.ident]
+
+    @classmethod
+    def nao_indices(cls):
+        return [TOKEN.atrib, TOKEN.DO, TOKEN.divide, TOKEN.multiplica, TOKEN.mod, TOKEN.mais, TOKEN.menos, TOKEN.oprel,
+                TOKEN.AND, TOKEN.OR, TOKEN.doisPto, TOKEN.fechaPar, TOKEN.ptoVirg, TOKEN.virg, TOKEN.NOT, TOKEN.intVal,
+                TOKEN.floatVal, TOKEN.strVal, TOKEN.abrePar, TOKEN.ident]
