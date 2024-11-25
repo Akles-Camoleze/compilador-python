@@ -200,7 +200,7 @@ class Sintatico:
             self.consome(TOKEN.fechaCol)
 
     def opc_indice(self):
-        if self.tokenLido[0] not in TOKEN.nao_indices():
+        if self.tokenLido[0] == TOKEN.abreCol:
             self.consome(TOKEN.abreCol)
             self.exp()
             self.resto_indice()
@@ -245,6 +245,7 @@ class Sintatico:
     def atrib(self):
         # <atrib> -> ident = <exp> ;
         self.consome(TOKEN.ident)
+        self.opc_indice()
         self.consome(TOKEN.atrib)
         self.exp()
         self.consome(TOKEN.ptoVirg)
