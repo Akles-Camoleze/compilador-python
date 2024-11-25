@@ -36,7 +36,7 @@ begin
    write("Forneca inteiros para ordenar (0=termina):");
    n = 1;
    # prompt = num2str(n) + "o: ";
-   # lista = [];
+   lista = [];
    read("Teste: ", aux);
    while (aux != 0) {
        lista = lista + [aux];
