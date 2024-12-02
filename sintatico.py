@@ -3,11 +3,14 @@
 #---------------------------------------------------
 
 from lexico import TOKEN
+from semantico import Semantico
+
 
 class Sintatico:
 
     def __init__(self, lexico):
         self.lexico = lexico
+        self.semantico = Semantico("saida.out")
 
     def traduz(self):
         self.tokenLido = self.lexico.getToken()
@@ -50,14 +53,23 @@ class Sintatico:
 
     def funcao(self):
         # <funcao> -> function ident ( <params> ) <tipoResultado> <corpo>
-        if self.tokenLido[0] == TOKEN.FUNCTION:
-            self.consome(TOKEN.FUNCTION)
-            self.consome(TOKEN.ident)
-            self.consome(TOKEN.abrePar)
-            self.params()
-            self.consome(TOKEN.fechaPar)
-            self.tipo_resultado()
-            self.corpo()
+        self.consome(TOKEN.FUNCTION)
+        token = self.tokenLido
+        self.consome(TOKEN.ident)
+        self.consome(TOKEN.abrePar)
+        args = self.params()
+        self.consome(TOKEN.fechaPar)
+        result = self.tipo_resultado()
+        types = args + result if result is not None else args
+        self.semantico.declara(token, (TOKEN.FUNCTION, types))
+        self.semantico.iniciaFuncao()
+
+        for p in args:
+            (tt, (tipo, info)) = p
+            self.semantico.declara(tt, (tipo, info))
+
+        self.corpo()
+        self.semantico.terminaFuncao()
 
     def resto_funcoes(self):
         # <funcao> <RestoFuncoes> | LAMBDA
@@ -69,7 +81,14 @@ class Sintatico:
         # <tipoResultado> -> LAMBDA | -> <tipo>
         if self.tokenLido[0] == TOKEN.seta:
             self.consome(TOKEN.seta)
-            self.tipo()
+            tipo = self.tipo()
+        else:
+            tipo = None
+
+        unknown_token = (None, None, None, None)
+
+        return [(unknown_token, tipo)]
+
 
     def corpo(self):
         # <corpo> -> begin <declaracoes> <calculo> end
@@ -80,27 +99,39 @@ class Sintatico:
 
     def params(self):
         if self.tokenLido[0] in TOKEN.tokens_tipo():
-            self.tipo()
+            tipo = self.tipo()
+            token = self.tokenLido
             self.consome(TOKEN.ident)
-            self.resto_params()
+            param_type = (token, tipo)
+            params = self.resto_params()
+            args_types = [param_type] + params
+            return args_types
+        else:
+            return []
 
     def resto_params(self):
+        # <restoParams> -> LAMBDA |, <tipo> ident <restoParams>
         if self.tokenLido[0] == TOKEN.virg:
             self.consome(TOKEN.virg)
-            self.tipo()
+            param_type = self.tipo()
             self.consome(TOKEN.ident)
-            self.resto_params()
+            resto = self.resto_params()
+            return [param_type] + resto
+        else:
+            return []
 
     def tipo(self):
         if self.tokenLido[0] == TOKEN.STRING:
+            tipo = TOKEN.STRING
             self.consome(TOKEN.STRING)
-            self.opc_lista()
         elif self.tokenLido[0] == TOKEN.FLOAT:
+            tipo = TOKEN.FLOAT
             self.consome(TOKEN.FLOAT)
-            self.opc_lista()
         else:
+            tipo = TOKEN.INT
             self.consome(TOKEN.INT)
-            self.opc_lista()
+
+        return tipo, self.opc_lista()
 
     def declaracoes(self):
         if self.tokenLido[0] in TOKEN.tokens_tipo():
@@ -128,6 +159,10 @@ class Sintatico:
             self.consome(TOKEN.abreCol)
             self.consome(TOKEN.LIST)
             self.consome(TOKEN.fechaCol)
+
+            return True
+
+        return False
 
     def calculo(self):
         if self.tokenLido[0] not in [TOKEN.fechaChave, TOKEN.END]:

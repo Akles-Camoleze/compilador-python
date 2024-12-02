@@ -1,19 +1,32 @@
 # ---------------------------------------------------
-# Tradutor para a linguagem CALC
+# Tradutor para a linguagem B-A-BA plus
 #
-# versao 1a (mar-2024)
+# versao 2a (28/nov/2024)
 # ---------------------------------------------------
 from ttoken import TOKEN
+
 
 class Semantico:
 
     def __init__(self, nomeAlvo):
-        self.tabelaSimbolos = dict()
+        self.tabelaSimbolos = list()
+        self.tabelaSimbolos = [dict()] + self.tabelaSimbolos
         self.alvo = open(nomeAlvo, "wt")
-        self.declara((TOKEN.ident, 'len', None, None), (TOKEN.FUNCTION, [(None, True), (TOKEN.INT, False)]))
-        self.declara((TOKEN.ident, 'num2str', None, None), (TOKEN.FUNCTION, [(TOKEN.FLOAT, False), (TOKEN.STRING, False)]))
-        self.declara((TOKEN.ident, 'str2num', None, None), (TOKEN.FUNCTION, [(TOKEN.STRING, False), (TOKEN.FLOAT, False)]))
-        self.declara((TOKEN.ident, 'trunc', None, None), (TOKEN.FUNCTION, [(TOKEN.FLOAT, False), (TOKEN.INT, False)]))
+        self.declara((TOKEN.ident, 'len', None, None), (
+            TOKEN.FUNCTION,
+            [(None, True), (TOKEN.INT, False)]
+        ))
+        self.declara((TOKEN.ident, 'num2str', None, None), (
+            TOKEN.FUNCTION,
+            [(TOKEN.FLOAT, False), (TOKEN.STRING, False)]
+        ))
+        self.declara((TOKEN.ident, 'str2num', None, None), (
+            TOKEN.FUNCTION, [(TOKEN.STRING, False), (TOKEN.FLOAT, False)]
+        ))
+        self.declara((TOKEN.ident, 'trunc', None, None), (
+            TOKEN.FUNCTION,
+            [(TOKEN.FLOAT, False), (TOKEN.INT, False)]
+        ))
 
     def finaliza(self):
         self.alvo.close()
@@ -25,23 +38,45 @@ class Semantico:
         raise Exception
 
     def gera(self, nivel, codigo):
-        identacao = ' ' * 4 * nivel
+        identacao = ' ' * 3 * nivel
         linha = identacao + codigo
         self.alvo.write(linha)
 
-    def declara(self, token, tipo):
+    def declara(self, tokenAtual, tipo):
         """ nome = lexema do ident
             tipo = (base, lista)
-            base = int | float | strig | function | None # None para listas genericas
+            base = int | float | strig | function | None # listas genericas
             Se base in [int,float,string]
-                lista = boolean # True se o tipo for uma lista da base
+                lista = boolean # True se o tipo for lista
             else
-                Lista = lista com os tipos dos arguentos, sendo
-                o tipo de cada argumento um par (base,lista)
-                Retorno = o ultimo tipo da lista sera o tipo do retorno
+                Lista = lista com os tipos dos argumentos, mais tipo do retorno
         """
-        if token[1] in self.tabelaSimbolos:
-            msg = f'Variavel {token[1]} redeclarada'
-            self.erroSemantico(token, msg)
+        (token, nome, linha, coluna) = tokenAtual
+        if self.existe_no_escopo(tokenAtual):
+            msg = f'Variavel {nome} redeclarada'
+            self.erroSemantico(tokenAtual, msg)
         else:
-            self.tabelaSimbolos[token[1]] = tipo
+            escopo = self.tabelaSimbolos[0]
+            escopo[nome] = tipo
+
+    def consulta(self, tokenAtual):
+        (token, nome, linha, coluna) = tokenAtual
+        for escopo in self.tabelaSimbolos:
+            if nome in escopo:
+                return escopo[nome]
+        msg = f'Variavel {nome} nao declarada'
+        self.erroSemantico(tokenAtual, msg)
+
+
+    def existe_no_escopo(self, tokenAtual):
+        (token, nome, linha, coluna) = tokenAtual
+        for escopo in self.tabelaSimbolos:
+            if nome in escopo:
+                return True
+        return False
+
+    def iniciaFuncao(self):
+        self.tabelaSimbolos = [dict()] + self.tabelaSimbolos
+
+    def terminaFuncao(self):
+        self.tabelaSimbolos = self.tabelaSimbolos[1:]
