@@ -59,13 +59,13 @@ class Semantico:
             escopo = self.tabelaSimbolos[0]
             escopo[nome] = tipo
 
-    def consulta(self, tokenAtual):
-        (token, nome, linha, coluna) = tokenAtual
+    def consulta(self, token_atual):
+        (token, nome, linha, coluna) = token_atual
         for escopo in self.tabelaSimbolos:
             if nome in escopo:
                 return escopo[nome]
         msg = f'Variavel {nome} nao declarada'
-        self.erroSemantico(tokenAtual, msg)
+        self.erroSemantico(token_atual, msg)
 
 
     def existe_no_escopo(self, tokenAtual):
@@ -80,3 +80,6 @@ class Semantico:
 
     def terminaFuncao(self):
         self.tabelaSimbolos = self.tabelaSimbolos[1:]
+
+    def escopo_atual(self):
+        return self.tabelaSimbolos[0]

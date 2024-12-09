@@ -36,6 +36,6 @@ class Tradutor:
 if __name__ == '__main__':
     x = Tradutor('codigoFonte2.txt')
     x.inicializa()
-    x.traduz()
+    x.sintatico.traduz()
     # x.testaLexico()
     x.finaliza()

@@ -5,7 +5,8 @@
 function sort(int[list] lista) -> int[list]
 begin
   int bolha, topo, tam, aux;
-  # tam = len(lista);
+  int [list] pipino;
+  tam = len(lista);
   for topo in range(tam,1,-1) do {
      for bolha in range(0,topo-1) do {
         if (lista[bolha] > lista[bolha+1]) then {
@@ -35,13 +36,13 @@ begin
    int[list] lista;
    write("Forneca inteiros para ordenar (0=termina):");
    n = 1;
-   # prompt = num2str(n) + "o: ";
+   prompt = num2str(n) + "o: ";
    lista = [];
    read("Teste: ", aux);
    while (aux != 0) {
        lista = lista + [aux];
    }
-   # lista = sort(lista);
-   # imprime(lista);
+   lista = sort(lista);
+   imprime(lista);
    return;
 end

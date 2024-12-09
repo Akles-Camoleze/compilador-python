@@ -47,8 +47,13 @@ class Sintatico:
 #-------- segue a gramatica -----------------------------------------
     def prog(self):
         # <prog> -> <funcao> <RestoFuncoes>
+
         self.funcao()
         self.resto_funcoes()
+
+        for chave, valor in self.semantico.escopo_atual().items():
+            print(f'Escopo Global -> {chave}: {valor}')
+
         self.consome(TOKEN.eof)
 
     def funcao(self):
@@ -69,6 +74,10 @@ class Sintatico:
             self.semantico.declara(tt, (tipo, info))
 
         self.corpo()
+
+        for chave, valor in self.semantico.escopo_atual().items():
+            print(f'Escopo {token[1]} -> {chave}: {valor}')
+
         self.semantico.terminaFuncao()
 
     def resto_funcoes(self):
@@ -139,20 +148,29 @@ class Sintatico:
             self.declaracoes()
 
     def declara(self):
-        self.tipo()
-        self.idents()
+        # <declara> -> <tipo> <idents> ;
+        tipo = self.tipo()
+        tokens = self.idents()
         self.consome(TOKEN.ptoVirg)
+
+        for token in tokens:
+            self.semantico.declara(token, tipo)
 
     def idents(self):
         if self.tokenLido[0] == TOKEN.ident:
+            token = self.tokenLido
             self.consome(TOKEN.ident)
-            self.resto_idents()
+            tokens = self.resto_idents()
+            return [token] + tokens
 
     def resto_idents(self):
         if self.tokenLido[0] == TOKEN.virg:
             self.consome(TOKEN.virg)
+            token = self.tokenLido
             self.consome(TOKEN.ident)
-            self.resto_idents()
+            return [token] + self.resto_idents()
+        else:
+            return []
 
     def opc_lista(self):
         if self.tokenLido[0] not in [TOKEN.BEGIN, TOKEN.ident]:
@@ -187,10 +205,20 @@ class Sintatico:
             self.enquanto()
         elif token == TOKEN.RETURN:
             self.retorna()
-        else:
-            # TODO: Quando ver ident deve consultar a tabela para acionar call ou atrib
-            # self.call()
-            self.atrib()
+        elif self.tokenLido[0] == TOKEN.ident:
+            token = self.semantico.consulta(self.tokenLido)
+
+            if token[0] == TOKEN.FUNCTION:
+                self.call()
+            else:
+                self.atrib()
+
+    def call(self):
+        # <call> -> ident ( <lista_outs> )
+        self.consome(TOKEN.ident)
+        self.consome(TOKEN.abrePar)
+        self.lista_outs()
+        self.consome(TOKEN.fechaPar)
 
     def para(self):
         self.consome(TOKEN.FOR)
@@ -226,6 +254,7 @@ class Sintatico:
             self.consome(TOKEN.fechaPar)
 
     def lista(self):
+        # <lista> -> ident <opcIndice> | [ <elemLista> ]
         if self.tokenLido[0] == TOKEN.ident:
             self.consome(TOKEN.ident)
             self.opc_indice()
@@ -235,6 +264,7 @@ class Sintatico:
             self.consome(TOKEN.fechaCol)
 
     def opc_indice(self):
+        # <opcIndice> -> LAMBDA | [ <exp> <restoElem> ]
         if self.tokenLido[0] == TOKEN.abreCol:
             self.consome(TOKEN.abreCol)
             self.exp()
@@ -242,6 +272,7 @@ class Sintatico:
             self.consome(TOKEN.fechaCol)
 
     def resto_indice(self):
+        # <restoElem> -> LAMBDA | : <exp>
         if self.tokenLido[0] == TOKEN.doisPto:
             self.consome(TOKEN.doisPto)
             self.exp()
@@ -278,7 +309,7 @@ class Sintatico:
             self.exp()
 
     def atrib(self):
-        # <atrib> -> ident = <exp> ;
+        # <atrib> -> ident <opcIndice> = <exp> ;
         self.consome(TOKEN.ident)
         self.opc_indice()
         self.consome(TOKEN.atrib)
@@ -459,10 +490,16 @@ class Sintatico:
             self.consome(TOKEN.abrePar)
             self.exp()
             self.consome(TOKEN.fechaPar)
+        elif self.tokenLido[0] == TOKEN.ident:
+            token = self.semantico.consulta(self.tokenLido)
+
+            if token[0] == TOKEN.FUNCTION:
+                self.call()
+            else:
+                self.lista()
         else:
-            # TODO: Ajustar no semantico para identificar o que o ident identifica (variável ou funcão)
             self.lista()
-            # self.call()
+
 
 
 
