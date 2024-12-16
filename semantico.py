@@ -27,6 +27,27 @@ class Semantico:
             TOKEN.FUNCTION,
             [(TOKEN.FLOAT, False), (TOKEN.INT, False)]
         ))
+        self.operacoes_validas = {
+            ((TOKEN.INT, False), TOKEN.mais, (TOKEN.INT, False)): (TOKEN.INT, False),
+            ((TOKEN.INT, False), TOKEN.menos, (TOKEN.INT, False)): (TOKEN.INT, False),
+            ((TOKEN.INT, False), TOKEN.multiplica, (TOKEN.INT, False)): (TOKEN.INT, False),
+            ((TOKEN.INT, False), TOKEN.divide, (TOKEN.INT, False)): (TOKEN.INT, False),
+            ((TOKEN.INT, False), TOKEN.oprel, (TOKEN.INT, False)): (TOKEN.INT, False),
+
+            ((TOKEN.INT, False), TOKEN.mais, (TOKEN.FLOAT, False)): (TOKEN.FLOAT, False),
+            ((TOKEN.INT, False), TOKEN.menos, (TOKEN.FLOAT, False)): (TOKEN.FLOAT, False),
+            ((TOKEN.INT, False), TOKEN.multiplica, (TOKEN.FLOAT, False)): (TOKEN.FLOAT, False),
+            ((TOKEN.INT, False), TOKEN.divide, (TOKEN.FLOAT, False)): (TOKEN.FLOAT, False),
+            ((TOKEN.INT, False), TOKEN.oprel, (TOKEN.FLOAT, False)): (TOKEN.INT, False),
+
+            ((TOKEN.FLOAT, False), TOKEN.mais, (TOKEN.FLOAT, False)): (TOKEN.FLOAT, False),
+            ((TOKEN.FLOAT, False), TOKEN.menos, (TOKEN.FLOAT, False)): (TOKEN.FLOAT, False),
+            ((TOKEN.FLOAT, False), TOKEN.multiplica, (TOKEN.FLOAT, False)): (TOKEN.FLOAT, False),
+            ((TOKEN.FLOAT, False), TOKEN.divide, (TOKEN.FLOAT, False)): (TOKEN.FLOAT, False),
+            ((TOKEN.FLOAT, False), TOKEN.oprel, (TOKEN.FLOAT, False)): (TOKEN.INT, False),
+
+            ((TOKEN.STRING, False), TOKEN.mais, (TOKEN.STRING, False)): (TOKEN.STRING, False),
+        }
 
     def finaliza(self):
         self.alvo.close()

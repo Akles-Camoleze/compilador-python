@@ -65,7 +65,7 @@ class Sintatico:
         args = self.params()
         self.consome(TOKEN.fechaPar)
         result = self.tipo_resultado()
-        types = args + result if result is not None else args
+        types = args + result
         self.semantico.declara(token, (TOKEN.FUNCTION, types))
         self.semantico.iniciaFuncao()
 
@@ -92,11 +92,9 @@ class Sintatico:
             self.consome(TOKEN.seta)
             tipo = self.tipo()
         else:
-            tipo = None
+            tipo = (None, False)
 
-        unknown_token = (None, None, None, None)
-
-        return [(unknown_token, tipo)]
+        return [tipo]
 
 
     def corpo(self):
@@ -205,7 +203,7 @@ class Sintatico:
             self.enquanto()
         elif token == TOKEN.RETURN:
             self.retorna()
-        elif self.tokenLido[0] == TOKEN.ident:
+        else:
             token = self.semantico.consulta(self.tokenLido)
 
             if token[0] == TOKEN.FUNCTION:

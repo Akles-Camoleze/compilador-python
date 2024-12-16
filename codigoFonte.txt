@@ -6,11 +6,14 @@ function main()
 begin
    int i;
    float j;
-   string j;
+   string k;
+   string b;
+   string l;
    int [list] lista;
    int [list] lista2;
    int [list] lista3;
    int [list] lista3;
+   l = k + b;
 
    read("Valor de j: ", A);
    write("Teste", 2, e, "teste");
