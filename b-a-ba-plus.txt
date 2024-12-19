@@ -12,7 +12,7 @@
 <tipo> -> string <opcLista> | int <opcLista> | float <opcLista>
 <opcLista> -> [ list ] | LAMBDA
 <calculo> -> LAMBDA | <com> <calculo>
-<com> -> <atrib> | <if> | <leitura> | <escrita> | <bloco> | <for> | <while> | <retorna> | <call>
+<com> -> <atrib> | <if> | <leitura> | <escrita> | <bloco> | <for> | <while> | <retorna> | <call> ;
 <retorna> -> return <expOpc> ;
 <expOpc> -> LAMBDA | <exp>
 <while> -> while ( <exp> ) <com>

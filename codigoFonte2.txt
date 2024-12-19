@@ -33,6 +33,7 @@ function main()
 begin
    string prompt;
    int n, aux;
+   string bosta;
    int[list] lista;
    write("Forneca inteiros para ordenar (0=termina):");
    n = 1;

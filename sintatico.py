@@ -186,7 +186,7 @@ class Sintatico:
             self.calculo()
 
     def com(self):
-        # <com> -> <atrib> | <if> | <leitura> | <escrita> | <bloco> | <for> | <while> | <retorna> | <call>
+        # <com> -> <atrib> | <if> | <leitura> | <escrita> | <bloco> | <for> | <while> | <retorna> | <call>;
         token = self.tokenLido[0]
 
         if token == TOKEN.abreChave:
@@ -201,15 +201,17 @@ class Sintatico:
             self.para()
         elif token == TOKEN.WHILE:
             self.enquanto()
-        elif token == TOKEN.RETURN:
-            self.retorna()
-        else:
+        elif token == TOKEN.ident:
             token = self.semantico.consulta(self.tokenLido)
 
             if token[0] == TOKEN.FUNCTION:
                 self.call()
+                self.consome(TOKEN.ptoVirg)
             else:
                 self.atrib()
+        else:
+            self.retorna()
+
 
     def call(self):
         # <call> -> ident ( <lista_outs> )
