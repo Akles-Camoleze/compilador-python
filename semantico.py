@@ -104,3 +104,12 @@ class Semantico:
 
     def escopo_atual(self):
         return self.tabelaSimbolos[0]
+
+    def checa_operacao(self, token_src, oprel, token_tgt):
+        if (token_src, oprel, token_tgt) in self.operacoes_validas:
+            return self.operacoes_validas[(token_src, oprel, token_tgt)]
+
+        if (token_tgt, oprel, token_src) in self.operacoes_validas:
+            return self.operacoes_validas[(token_tgt, oprel, token_src)]
+
+        return None

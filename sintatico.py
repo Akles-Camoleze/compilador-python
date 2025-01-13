@@ -482,10 +482,13 @@ class Sintatico:
         # <folha> -> intVal | floatVal | strVal | <call> | <lista> | ( <exp> )
         if self.tokenLido[0] == TOKEN.intVal:
             self.consome(TOKEN.intVal)
+            return (TOKEN.INT, False)
         elif self.tokenLido[0] == TOKEN.floatVal:
             self.consome(TOKEN.floatVal)
+            return (TOKEN.FLOAT, False)
         elif self.tokenLido[0] == TOKEN.strVal:
             self.consome(TOKEN.strVal)
+            return (TOKEN.STRING, False)
         elif self.tokenLido[0] == TOKEN.abrePar:
             self.consome(TOKEN.abrePar)
             self.exp()
@@ -494,11 +497,11 @@ class Sintatico:
             token = self.semantico.consulta(self.tokenLido)
 
             if token[0] == TOKEN.FUNCTION:
-                self.call()
+                return self.call()
             else:
-                self.lista()
+                return self.lista()
         else:
-            self.lista()
+            return self.lista()
 
 
 
