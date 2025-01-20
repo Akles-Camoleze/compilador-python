@@ -1,8 +1,3 @@
-# ---------------------------------------------------
-# Tradutor para a linguagem B-A-BA plus
-#
-# versao 2a (28/nov/2024)
-# ---------------------------------------------------
 from ttoken import TOKEN
 
 
@@ -47,6 +42,11 @@ class Semantico:
             ((TOKEN.FLOAT, False), TOKEN.oprel, (TOKEN.FLOAT, False)): (TOKEN.INT, False),
 
             ((TOKEN.STRING, False), TOKEN.mais, (TOKEN.STRING, False)): (TOKEN.STRING, False),
+
+            # Add operations for list types
+            ((TOKEN.INT, True), TOKEN.oprel, (TOKEN.INT, True)): (TOKEN.INT, False),
+            ((TOKEN.FLOAT, True), TOKEN.oprel, (TOKEN.FLOAT, True)): (TOKEN.INT, False),
+            ((TOKEN.STRING, True), TOKEN.oprel, (TOKEN.STRING, True)): (TOKEN.INT, False),
         }
 
     def finaliza(self):
@@ -88,7 +88,6 @@ class Semantico:
         msg = f'Variavel {nome} nao declarada'
         self.erroSemantico(token_atual, msg)
 
-
     def existe_no_escopo(self, tokenAtual):
         (token, nome, linha, coluna) = tokenAtual
         for escopo in self.tabelaSimbolos:
@@ -106,10 +105,73 @@ class Semantico:
         return self.tabelaSimbolos[0]
 
     def checa_operacao(self, token_src, oprel, token_tgt):
-        if (token_src, oprel, token_tgt) in self.operacoes_validas:
-            return self.operacoes_validas[(token_src, oprel, token_tgt)]
+        """
+        Verifica se uma operação entre dois tipos é válida e retorna o tipo resultante.
+        Se a operação não for válida, retorna None.
 
-        if (token_tgt, oprel, token_src) in self.operacoes_validas:
-            return self.operacoes_validas[(token_tgt, oprel, token_src)]
+        Args:
+            token_src: Tupla (tipo, is_list) do primeiro operando
+            oprel: Token do operador
+            token_tgt: Tupla (tipo, is_list) do segundo operando
 
+        Returns:
+            Tupla (tipo, is_list) do resultado ou None se operação inválida
+        """
+        # Verifica a operação direta
+        result = self.operacoes_validas.get((token_src, oprel, token_tgt))
+        if result is not None:
+            return result
+
+        # Verifica a operação com argumentos invertidos
+        result = self.operacoes_validas.get((token_tgt, oprel, token_src))
+        if result is not None:
+            return result
+
+        # Se chegou aqui, a operação é inválida
         return None
+
+    def verifica_compatibilidade(self, token_atual, tipo_src, tipo_tgt):
+        """
+        Verifica se dois tipos são compatíveis para atribuição/comparação
+        e lança erro semântico se não forem.
+
+        Args:
+            token_atual: Token atual para mensagem de erro
+            tipo_src: Tupla (tipo, is_list) da origem
+            tipo_tgt: Tupla (tipo, is_list) do destino
+        """
+        if tipo_src is not None and tipo_tgt[0] is None and tipo_tgt[1] == True and tipo_tgt[1] == tipo_src[1]:
+            return
+
+        if tipo_src != tipo_tgt:
+            (_, lexema, _, _) = token_atual
+            msg = f'Tipos incompatíveis na operação com {lexema}: ' \
+                  f'esperado {tipo_tgt[0]} mas recebeu {TOKEN.msg(tipo_src[0])}'
+            if tipo_tgt[1] != tipo_src[1]:
+                msg += f' (um é lista e outro não)'
+            # else:
+            #     return
+            self.erroSemantico(token_atual, msg)
+
+    def tipo_retorno_atual(self):
+        """
+        Retorna o tipo de retorno esperado da função atual.
+        Para funções regulares, retorna o último tipo da lista de tipos.
+        Para funções void (sem retorno), retorna (None, False).
+
+        Returns:
+            Tupla (tipo, is_list) do tipo de retorno esperado da função atual
+        """
+        escopo_global = self.tabelaSimbolos[-1]  # pega o escopo global
+        escopo_atual = self.tabelaSimbolos[0]  # pega o escopo da função atual
+
+        # Procura a função atual no escopo global
+        for nome, tipo in escopo_global.items():
+            # Se é uma função e está no escopo atual (mesmos símbolos)
+            if (tipo[0] == TOKEN.FUNCTION and
+                    nome in escopo_atual):
+                # Retorna o último tipo da lista de tipos (tipo de retorno)
+                return tipo[1][-1]
+
+        # Se não encontrou a função ou não está em um contexto de função
+        return (None, False)

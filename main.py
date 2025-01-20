@@ -5,7 +5,6 @@
 #---------------------------------------------------
 from lexico import Lexico
 from sintatico import Sintatico
-# from sintatico import Sintatico
 from ttoken import TOKEN
 
 class Tradutor:
@@ -34,7 +33,7 @@ class Tradutor:
 
 # inicia a traducao
 if __name__ == '__main__':
-    x = Tradutor('codigoFonte2.txt')
+    x = Tradutor('codigoFonte3.txt')
     x.inicializa()
     x.sintatico.traduz()
     # x.testaLexico()

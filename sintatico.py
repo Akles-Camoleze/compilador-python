@@ -212,91 +212,209 @@ class Sintatico:
         else:
             self.retorna()
 
-
     def call(self):
         # <call> -> ident ( <lista_outs> )
+        token_func = self.tokenLido
         self.consome(TOKEN.ident)
+        tipo_func = self.semantico.consulta(token_func)
+
+        if tipo_func[0] != TOKEN.FUNCTION:
+            self.semantico.erroSemantico(token_func, f"{token_func[1]} não é uma função")
+
         self.consome(TOKEN.abrePar)
-        self.lista_outs()
+        tipos_args = self.lista_outs()
         self.consome(TOKEN.fechaPar)
+
+        # Verifica se os argumentos correspondem aos parâmetros da função
+        args_esperados = tipo_func[1][:-1]  # todos exceto o tipo de retorno
+        if len(tipos_args) != len(args_esperados):
+            self.semantico.erroSemantico(token_func,
+                                         f"Número incorreto de argumentos para {token_func[1]}. Esperado {len(args_esperados)}, recebido {len(tipos_args)}")
+
+        for i, (tipo_arg, tipo_esperado) in enumerate(zip(tipos_args, args_esperados)):
+            self.semantico.verifica_compatibilidade(token_func, tipo_arg, tipo_esperado)
+
+        return tipo_func[1][-1]
 
     def para(self):
         self.consome(TOKEN.FOR)
+        token_var = self.tokenLido
         self.consome(TOKEN.ident)
+        tipo_var = self.semantico.consulta(token_var)
+
         self.consome(TOKEN.IN)
-        self.faixa()
+        tipo_faixa = self.faixa()
+
+        # Verifica compatibilidade entre variável de iteração e elementos da faixa
+        self.semantico.verifica_compatibilidade(token_var, tipo_faixa, tipo_var)
+
         self.consome(TOKEN.DO)
         self.com()
 
     def enquanto(self):
         self.consome(TOKEN.WHILE)
         self.consome(TOKEN.abrePar)
-        self.exp()
+        tipo_cond = self.exp()
+
+        # Verifica se a condição é booleana
+        if tipo_cond != (TOKEN.INT, False):
+            self.semantico.erroSemantico(self.tokenLido, "Condição do while deve ser uma expressão booleana")
+
         self.consome(TOKEN.fechaPar)
         self.com()
 
     def retorna(self):
-        # <retorna> -> return <expOpc> ;
+        # <retorna> -> return <expOpc>;
         self.consome(TOKEN.RETURN)
-        self.exp_opc()
+
+        # Obtém o tipo de retorno esperado da função atual
+        tipo_esperado = self.semantico.tipo_retorno_atual()
+
+        # Se não há tipo de retorno esperado mas há expressão, erro
+        if tipo_esperado[0] is None:
+            if self.tokenLido[0] not in [TOKEN.ptoVirg]:
+                self.semantico.erroSemantico(self.tokenLido, "Função void não deve retornar valor")
+            self.exp_opc()
+            self.consome(TOKEN.ptoVirg)
+            return
+
+        # Se há tipo de retorno esperado mas não há expressão, erro
+        if self.tokenLido[0] == TOKEN.ptoVirg:
+            self.semantico.erroSemantico(self.tokenLido,
+                                         f"Função deve retornar valor do tipo {TOKEN.msg(tipo_esperado[0])}")
+
+        tipo_retornado = self.exp_opc()
+
+        # Se há expressão, verifica compatibilidade com tipo esperado
+        if tipo_retornado:
+            self.semantico.verifica_compatibilidade(self.tokenLido, tipo_retornado, tipo_esperado)
+
         self.consome(TOKEN.ptoVirg)
 
     def faixa(self):
         if self.tokenLido[0] == TOKEN.ident:
-            self.lista()
+            return self.lista()
         else:
             self.consome(TOKEN.RANGE)
             self.consome(TOKEN.abrePar)
-            self.exp()
+            tipo_inicio = self.exp()
+
+            # Início do range deve ser inteiro
+            if tipo_inicio != (TOKEN.INT, False):
+                self.semantico.erroSemantico(self.tokenLido, "Início do range deve ser inteiro")
+
             self.consome(TOKEN.virg)
-            self.exp()
-            self.opc_range()
+            tipo_fim = self.exp()
+
+            # Fim do range deve ser inteiro
+            if tipo_fim != (TOKEN.INT, False):
+                self.semantico.erroSemantico(self.tokenLido, "Fim do range deve ser inteiro")
+
+            if self.opc_range():
+                tipo_passo = self.exp()
+                # Passo do range deve ser inteiro
+                if tipo_passo != (TOKEN.INT, False):
+                    self.semantico.erroSemantico(self.tokenLido, "Passo do range deve ser inteiro")
+
             self.consome(TOKEN.fechaPar)
+            return (TOKEN.INT, False)
+
+    def nao(self):
+        # <not> -> not <nao> | <rel>
+        token = self.tokenLido[0]
+
+        if token == TOKEN.NOT:
+            token_op = self.tokenLido
+            self.consome(TOKEN.NOT)
+            tipo = self.nao()
+
+            # Verifica se o tipo é compatível com operação NOT (deve ser booleano/int)
+            if tipo != (TOKEN.INT, False):
+                self.semantico.erroSemantico(token_op, "Operação NOT requer operando booleano")
+            return tipo
+        else:
+            return self.rel()
 
     def lista(self):
         # <lista> -> ident <opcIndice> | [ <elemLista> ]
         if self.tokenLido[0] == TOKEN.ident:
+            token = self.tokenLido
             self.consome(TOKEN.ident)
-            self.opc_indice()
+            tipo = self.semantico.consulta(token)
+            tem_indice = self.opc_indice()
+
+            # Se acessou índice em tipo não-lista, erro
+            if tem_indice and not tipo[1]:
+                self.semantico.erroSemantico(token, f"Tentativa de acessar índice em variável não-lista")
+
+            return tipo
         else:
             self.consome(TOKEN.abreCol)
-            self.elemento_lista()
+            tipo_base = self.elemento_lista()
             self.consome(TOKEN.fechaCol)
+            return (tipo_base[0], True)  # Retorna como lista
 
     def opc_indice(self):
-        # <opcIndice> -> LAMBDA | [ <exp> <restoElem> ]
+        # <opcIndice> -> LAMBDA | [ <exp> <restoIndice> ]
         if self.tokenLido[0] == TOKEN.abreCol:
             self.consome(TOKEN.abreCol)
-            self.exp()
+            tipo_indice = self.exp()
+
+            # Índice deve ser inteiro
+            if tipo_indice != (TOKEN.INT, False):
+                self.semantico.erroSemantico(self.tokenLido, "Índice deve ser inteiro")
+
             self.resto_indice()
             self.consome(TOKEN.fechaCol)
+            return True
+        return False
 
     def resto_indice(self):
-        # <restoElem> -> LAMBDA | : <exp>
+        # <restoIndice> -> LAMBDA | : <exp>
         if self.tokenLido[0] == TOKEN.doisPto:
             self.consome(TOKEN.doisPto)
-            self.exp()
+            tipo_indice = self.exp()
+
+            # Índice do slice também deve ser inteiro
+            if tipo_indice != (TOKEN.INT, False):
+                self.semantico.erroSemantico(self.tokenLido, "Índice de slice deve ser inteiro")
 
     def elemento_lista(self):
         if self.tokenLido[0] in TOKEN.tokens_valor():
-            self.elemento()
-            self.resto_elem_lista()
+            tipo = self.elemento()
+            tipos_resto = self.resto_elem_lista()
+
+            # Verifica se todos os elementos são do mesmo tipo
+            for tipo_elem in tipos_resto:
+                if tipo != tipo_elem:
+                    self.semantico.erroSemantico(self.tokenLido, "Elementos da lista devem ser do mesmo tipo")
+
+            return tipo
+        return None
 
     def elemento(self):
         if self.tokenLido[0] == TOKEN.intVal:
             self.consome(TOKEN.intVal)
+            return (TOKEN.INT, False)
         elif self.tokenLido[0] == TOKEN.floatVal:
             self.consome(TOKEN.floatVal)
+            return (TOKEN.FLOAT, False)
         elif self.tokenLido[0] == TOKEN.strVal:
             self.consome(TOKEN.strVal)
+            return (TOKEN.STRING, False)
         else:
+            token = self.tokenLido
             self.consome(TOKEN.ident)
+            return self.semantico.consulta(token)
 
     def resto_elem_lista(self):
         if self.tokenLido[0] == TOKEN.virg:
             self.consome(TOKEN.virg)
-            self.elemento()
-            self.resto_elem_lista()
+            tipo = self.elemento()
+            tipos_resto = self.resto_elem_lista()
+            return [tipo] + tipos_resto
+        else:
+            return []
 
     def opc_range(self):
         if self.tokenLido[0] == TOKEN.virg:
@@ -306,14 +424,21 @@ class Sintatico:
     def exp_opc(self):
         # <expOpc> -> LAMBDA | <exp>
         if self.tokenLido[0] not in [TOKEN.ptoVirg]:
-            self.exp()
+            return self.exp()
+        return None
 
     def atrib(self):
         # <atrib> -> ident <opcIndice> = <exp> ;
+        token_var = self.tokenLido  # guarda o token da variável
         self.consome(TOKEN.ident)
-        self.opc_indice()
+        tipo_var = self.semantico.consulta(token_var)  # tipo da variável
+        tem_indice = self.opc_indice()
         self.consome(TOKEN.atrib)
-        self.exp()
+        tipo_exp = self.exp()  # pega o tipo da expressão
+
+        # Verifica compatibilidade entre tipo da variável e expressão
+        self.semantico.verifica_compatibilidade(token_var, tipo_exp, tipo_var)
+
         self.consome(TOKEN.ptoVirg)
 
     def leitura(self):
@@ -337,25 +462,33 @@ class Sintatico:
 
     def lista_outs(self):
         # <lista_outs> -> <out> <restoLista_outs>
-        self.out()
-        self.resto_lista_outs()
+        tipo_out = self.out()
+        tipos_resto = self.resto_lista_outs()
+        return [tipo_out] + tipos_resto if tipos_resto else [tipo_out]
 
     def out(self):
         # <out> -> <folha>
-        self.folha()
+        return self.folha()
 
     def resto_lista_outs(self):
         # <restoLista_outs> -> LAMBDA | , <out> <restoLista_outs>
         if self.tokenLido[0] == TOKEN.virg:
             self.consome(TOKEN.virg)
-            self.out()
-            self.resto_lista_outs()
+            tipo_out = self.out()
+            tipos_resto = self.resto_lista_outs()
+            return [tipo_out] + tipos_resto if tipos_resto else [tipo_out]
+        return []
 
     def se(self):
         # <if> -> if ( <exp> ) then <com> <else_opc>
         self.consome(TOKEN.IF)
         self.consome(TOKEN.abrePar)
-        self.exp()
+        tipo_cond = self.exp()
+
+        # Verifica se a condição é booleana (resultado de operação relacional)
+        if tipo_cond != (TOKEN.INT, False):  # assumindo que booleano é representado como INT
+            self.semantico.erroSemantico(self.tokenLido, "Condição do if deve ser uma expressão booleana")
+
         self.consome(TOKEN.fechaPar)
         self.consome(TOKEN.THEN)
         self.com()
@@ -377,80 +510,100 @@ class Sintatico:
 
     def exp(self):
         # <exp> -> <or>
-        self.disj()
+        return self.disj()
 
     def disj(self):
         # <disj> -> <conj> <resto_disj>
-        self.conj()
-        self.resto_disj()
+        tipo_conj = self.conj()
+        return self.resto_disj(tipo_conj)
 
-    def resto_disj(self):
+    def resto_disj(self, tipo_esq):
         # <restoOr> -> LAMBDA | or <conj> <resto_disj>
         token = self.tokenLido[0]
 
         if token == TOKEN.OR:
+            token_op = self.tokenLido
             self.consome(TOKEN.OR)
-            self.conj()
-            self.resto_disj()
+            tipo_dir = self.conj()
+
+            # Verifica se os tipos são compatíveis com operação OR
+            tipo_res = self.semantico.checa_operacao(tipo_esq, TOKEN.OR, tipo_dir)
+            if tipo_res is None:
+                self.semantico.erroSemantico(token_op, f"Operação OR inválida entre os tipos")
+
+            return self.resto_disj(tipo_res)
+        return tipo_esq
 
     def conj(self):
         # <conj> -> <nao> <resto_conj>
-        self.nao()
-        self.resto_conj()
+        tipo_nao = self.nao()
+        return self.resto_conj(tipo_nao)
 
-    def resto_conj(self):
+    def resto_conj(self, tipo_esq):
         # <restoConj> -> LAMBDA | and <nao> <resto_conj>
         token = self.tokenLido[0]
 
         if token == TOKEN.AND:
+            token_op = self.tokenLido
             self.consome(TOKEN.AND)
-            self.nao()
-            self.resto_conj()
+            tipo_dir = self.nao()
 
-    def nao(self):
-        # <not> -> not <nao> | <rel>
-        token = self.tokenLido[0]
+            # Verifica se os tipos são compatíveis com operação AND
+            tipo_res = self.semantico.checa_operacao(tipo_esq, TOKEN.AND, tipo_dir)
+            if tipo_res is None:
+                self.semantico.erroSemantico(token_op, f"Operação AND inválida entre os tipos")
 
-        if token == TOKEN.NOT:
-            self.consome(TOKEN.NOT)
-            self.nao()
-        else:
-            self.rel()
+            return self.resto_conj(tipo_res)
+        return tipo_esq
 
     def rel(self):
-        # <rel> -> <uno> <restoRel>
-        self.soma()
-        self.resto_rel()
+        # <rel> -> <soma> <restoRel>
+        tipo_soma = self.soma()
+        return self.resto_rel(tipo_soma)
 
-    def resto_rel(self):
+    def resto_rel(self, tipo_esq):
         token = self.tokenLido[0]
 
         if token == TOKEN.oprel:
+            token_op = self.tokenLido
             self.consome(TOKEN.oprel)
-            self.soma()
+            tipo_dir = self.soma()
+
+            # Verifica se os tipos são compatíveis com operação relacional
+            tipo_res = self.semantico.checa_operacao(tipo_esq, TOKEN.oprel, tipo_dir)
+            if tipo_res is None:
+                self.semantico.erroSemantico(token_op, f"Operação relacional inválida entre os tipos")
+
+            return tipo_res
+        return tipo_esq
 
     def soma(self):
         # <soma> -> <mult> <resto_soma>
-        self.mult()
-        self.resto_soma()
+        tipo_mult = self.mult()
+        return self.resto_soma(tipo_mult)
 
-    def resto_soma(self):
+    def resto_soma(self, tipo_esq):
         # <resto_soma> -> LAMBDA | + <mult> <resto_soma> | - <mult> <resto_soma>
         token = self.tokenLido[0]
 
-        if token == TOKEN.mais:
-            self.consome(TOKEN.mais)
-            self.mult()
-            self.resto_soma()
-        elif token == TOKEN.menos:
-            self.consome(TOKEN.menos)
-            self.mult()
-            self.resto_soma()
+        if token in [TOKEN.mais, TOKEN.menos]:
+            token_op = self.tokenLido
+            self.consome(token)
+            tipo_dir = self.mult()
+
+            # Verifica se os tipos são compatíveis com a operação
+            tipo_res = self.semantico.checa_operacao(tipo_esq, token, tipo_dir)
+            if tipo_res is None:
+                op_nome = "soma" if token == TOKEN.mais else "subtração"
+                self.semantico.erroSemantico(token_op, f"Operação de {op_nome} inválida entre os tipos")
+
+            return self.resto_soma(tipo_res)
+        return tipo_esq
 
     def mult(self):
         # <mult> -> <uno> <resto_mult>
-        self.uno()
-        self.resto_mult()
+        tipo_uno = self.uno()
+        return self.resto_mult(tipo_uno)
 
     def uno(self):
         # <uno> -> + <uno> | - <uno> | <folha>
@@ -463,20 +616,22 @@ class Sintatico:
         else:
             self.folha()
 
-    def resto_mult(self):
-        # <restoMult> -> LAMBDA | / <uno> <restoMult> | * <uno> <restoMult> | % <uno> <restoMult>
-        if self.tokenLido[0] == TOKEN.multiplica:
-            self.consome(TOKEN.multiplica)
-            self.uno()
-            self.resto_mult()
-        elif self.tokenLido[0] == TOKEN.divide:
-            self.consome(TOKEN.divide)
-            self.uno()
-            self.resto_mult()
-        elif self.tokenLido[0] == TOKEN.mod:
-            self.consome(TOKEN.mod)
-            self.uno()
-            self.resto_mult()
+    def resto_mult(self, tipo_esq):
+        # <restoMult> -> LAMBDA | * <uno> <restoMult> | / <uno> <restoMult> | % <uno> <restoMult>
+        if self.tokenLido[0] in [TOKEN.multiplica, TOKEN.divide, TOKEN.mod]:
+            token_op = self.tokenLido
+            op = self.tokenLido[0]
+            self.consome(op)
+            tipo_dir = self.uno()
+
+            # Verifica se os tipos são compatíveis com a operação
+            tipo_res = self.semantico.checa_operacao(tipo_esq, op, tipo_dir)
+            if tipo_res is None:
+                op_nome = "multiplicação" if op == TOKEN.multiplica else "divisão" if op == TOKEN.divide else "módulo"
+                self.semantico.erroSemantico(token_op, f"Operação de {op_nome} inválida entre os tipos")
+
+            return self.resto_mult(tipo_res)
+        return tipo_esq
 
     def folha(self):
         # <folha> -> intVal | floatVal | strVal | <call> | <lista> | ( <exp> )
@@ -491,12 +646,14 @@ class Sintatico:
             return (TOKEN.STRING, False)
         elif self.tokenLido[0] == TOKEN.abrePar:
             self.consome(TOKEN.abrePar)
-            self.exp()
+            tipo = self.exp()
             self.consome(TOKEN.fechaPar)
+            return tipo
         elif self.tokenLido[0] == TOKEN.ident:
-            token = self.semantico.consulta(self.tokenLido)
+            token = self.tokenLido
+            tipo = self.semantico.consulta(token)
 
-            if token[0] == TOKEN.FUNCTION:
+            if tipo[0] == TOKEN.FUNCTION:
                 return self.call()
             else:
                 return self.lista()
