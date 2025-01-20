@@ -1,8 +1,3 @@
-#---------------------------------------------------
-# Tradutor para a linguagem CALC
-#
-# versao 1a (mar-2024)
-#---------------------------------------------------
 from lexico import Lexico
 from sintatico import Sintatico
 from ttoken import TOKEN

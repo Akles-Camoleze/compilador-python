@@ -132,25 +132,41 @@ class Semantico:
 
     def verifica_compatibilidade(self, token_atual, tipo_src, tipo_tgt):
         """
-        Verifica se dois tipos são compatíveis para atribuição/comparação
-        e lança erro semântico se não forem.
+        Verifica se dois tipos são compatíveis para atribuição/comparação,
+        considerando que (None, True) representa uma lista de qualquer tipo.
 
         Args:
             token_atual: Token atual para mensagem de erro
             tipo_src: Tupla (tipo, is_list) da origem
             tipo_tgt: Tupla (tipo, is_list) do destino
         """
-        if tipo_src is not None and tipo_tgt[0] is None and tipo_tgt[1] == True and tipo_tgt[1] == tipo_src[1]:
-            return
+        # Caso especial: se o destino é uma lista genérica (None, True)
+        if tipo_tgt == (None, True):
+            # Verifica se a origem é uma lista de qualquer tipo
+            if not tipo_src[1]:  # se não é lista
+                (_, lexema, _, _) = token_atual
+                msg = f'Tipos incompatíveis na operação com {lexema}: ' \
+                      f'esperado uma lista mas recebeu um valor simples do tipo {TOKEN.msg(tipo_src[0])}'
+                self.erroSemantico(token_atual, msg)
+            return  # se é lista, aceita qualquer tipo base
 
-        if tipo_src != tipo_tgt:
+        # Caso especial: se a origem é uma lista genérica (None, True)
+        if tipo_src == (None, True):
+            # Verifica se o destino também é uma lista
+            if not tipo_tgt[1]:  # se não é lista
+                (_, lexema, _, _) = token_atual
+                msg = f'Tipos incompatíveis na operação com {lexema}: ' \
+                      f'tentando atribuir uma lista para um valor simples do tipo {TOKEN.msg(tipo_tgt[0])}'
+                self.erroSemantico(token_atual, msg)
+            return  # se é lista, aceita qualquer tipo base
+
+        # Verificação normal de tipos
+        if tipo_src[0] != tipo_tgt[0] or tipo_src[1] != tipo_tgt[1]:
             (_, lexema, _, _) = token_atual
             msg = f'Tipos incompatíveis na operação com {lexema}: ' \
-                  f'esperado {tipo_tgt[0]} mas recebeu {TOKEN.msg(tipo_src[0])}'
+                  f'esperado {TOKEN.msg(tipo_tgt[0])} mas recebeu {TOKEN.msg(tipo_src[0])}'
             if tipo_tgt[1] != tipo_src[1]:
                 msg += f' (um é lista e outro não)'
-            # else:
-            #     return
             self.erroSemantico(token_atual, msg)
 
     def tipo_retorno_atual(self):
@@ -162,16 +178,4 @@ class Semantico:
         Returns:
             Tupla (tipo, is_list) do tipo de retorno esperado da função atual
         """
-        escopo_global = self.tabelaSimbolos[-1]  # pega o escopo global
-        escopo_atual = self.tabelaSimbolos[0]  # pega o escopo da função atual
-
-        # Procura a função atual no escopo global
-        for nome, tipo in escopo_global.items():
-            # Se é uma função e está no escopo atual (mesmos símbolos)
-            if (tipo[0] == TOKEN.FUNCTION and
-                    nome in escopo_atual):
-                # Retorna o último tipo da lista de tipos (tipo de retorno)
-                return tipo[1][-1]
-
-        # Se não encontrou a função ou não está em um contexto de função
-        return (None, False)
+        return self.escopo_atual()[-1]

@@ -15,11 +15,11 @@ class Sintatico:
     def traduz(self):
         self.tokenLido = self.lexico.getToken()
 
-        try:
-            self.prog()
-            print('Traduzido com sucesso.')
-        except:
-            pass
+        # try:
+        self.prog()
+        print('Traduzido com sucesso.')
+        # except:
+        #     pass
 
     def consome(self, tokenAtual):
         (token, lexema, linha, coluna) = self.tokenLido
@@ -347,6 +347,9 @@ class Sintatico:
             if tem_indice and not tipo[1]:
                 self.semantico.erroSemantico(token, f"Tentativa de acessar índice em variável não-lista")
 
+            if tipo[1]:
+                return tipo[0], not tem_indice
+
             return tipo
         else:
             self.consome(TOKEN.abreCol)
@@ -434,7 +437,10 @@ class Sintatico:
         tipo_var = self.semantico.consulta(token_var)  # tipo da variável
         tem_indice = self.opc_indice()
         self.consome(TOKEN.atrib)
-        tipo_exp = self.exp()  # pega o tipo da expressão
+        tipo_exp = self.exp()
+
+        if tipo_var[1]:
+            tipo_var = (tipo_var[0], not tem_indice)
 
         # Verifica compatibilidade entre tipo da variável e expressão
         self.semantico.verifica_compatibilidade(token_var, tipo_exp, tipo_var)
@@ -614,7 +620,7 @@ class Sintatico:
             self.consome(TOKEN.menos)
             self.uno()
         else:
-            self.folha()
+            return self.folha()
 
     def resto_mult(self, tipo_esq):
         # <restoMult> -> LAMBDA | * <uno> <restoMult> | / <uno> <restoMult> | % <uno> <restoMult>
